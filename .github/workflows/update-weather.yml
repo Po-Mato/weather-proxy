@@ -2,28 +2,38 @@ name: Update Weather Data
 
 on:
   schedule:
-    - cron: '0 * * * *' # 매시간 정각마다 실행 (필요시 '*/30 * * * *' 등으로 조정)
-  workflow_dispatch: # 수동 실행 버튼 활성화
+    - cron: '0 * * * *' # 매시간 정각마다 실행
+  workflow_dispatch: # Actions 탭에서 수동 실행 버튼 활성화
 
 jobs:
   update-weather:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # 리포지토리 커밋 권한
+      contents: write # 리포지토리 커밋 및 푸시 권한
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
 
       - name: Fetch Weather Data (Open-Meteo)
         run: |
           mkdir -p data
-          # 서울 기준(위도 37.566, 경도 126.978) 기온, 습도, 날씨 코드 가져오기
-          curl -s "https://api.open-meteo.com/v1/forecast?latitude=37.566&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia/Seoul" > data/weather.json
+          
+          # User-Agent 설정, 최대 15초 대기, 실패 시 2초 간격 최대 3회 재시도 적용
+          curl -s -A "Mozilla/5.0 (compatible; GitHub Actions)" \
+               --max-time 15 \
+               --retry 3 \
+               --retry-delay 2 \
+               --retry-connrefused \
+               "https://api.open-meteo.com/v1/forecast?latitude=37.566&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia/Seoul" > data/weather.json
 
       - name: Commit and Push
         run: |
+          # 봇 계정으로 Git 설정
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          
           git add data/weather.json
-          # 변경사항이 있을 때만 커밋
+          
+          # 날씨 데이터에 변경사항이 있을 때만 커밋 (오류 방지)
           git commit -m "chore: update weather data" || echo "No changes to commit"
           git push
