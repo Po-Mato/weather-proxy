@@ -19,12 +19,13 @@ jobs:
           mkdir -p data
           
           # User-Agent 설정, 최대 15초 대기, 실패 시 2초 간격 최대 3회 재시도 적용
+          # 현재 날씨(current), 시간별 예보(hourly), 이틀 치 데이터(forecast_days=2) 요청
           curl -s -A "Mozilla/5.0 (compatible; GitHub Actions)" \
                --max-time 15 \
                --retry 3 \
                --retry-delay 2 \
                --retry-connrefused \
-               "https://api.open-meteo.com/v1/forecast?latitude=37.566&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia/Seoul" > data/weather.json
+               "https://api.open-meteo.com/v1/forecast?latitude=37.566&longitude=126.978&current=temperature_2m,relative_humidity_2m,weather_code&hourly=temperature_2m,precipitation_probability,weather_code&timezone=Asia/Seoul&forecast_days=2" > data/weather.json
 
       - name: Commit and Push
         run: |
@@ -35,5 +36,5 @@ jobs:
           git add data/weather.json
           
           # 날씨 데이터에 변경사항이 있을 때만 커밋 (오류 방지)
-          git commit -m "chore: update weather data" || echo "No changes to commit"
+          git commit -m "chore: update weather data with hourly forecast" || echo "No changes to commit"
           git push
